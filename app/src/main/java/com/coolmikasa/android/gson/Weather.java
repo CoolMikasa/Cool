@@ -8,7 +8,7 @@ import java.util.List;
  * Created by Lee on 2017/11/26/026.
  */
 
-public class Weather {
+public class Weather {//按需定义实体类 即只获取整个文本中需要使用的信息
     public String status;
     public Basic basic;
     public Aqi aqi;

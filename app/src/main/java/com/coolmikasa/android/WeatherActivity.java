@@ -57,7 +57,9 @@ public class WeatherActivity extends AppCompatActivity {
         drawerLayout = findViewById(R.id.drawer_layout);
         navButton = findViewById(R.id.nav_button);
 
-
+        /**
+         * 获取界面各个控件的引用
+         */
         weatherLayout = findViewById(R.id.weather_layout);
         titleCity = findViewById(R.id.title_city);
         titleUpdateTime = findViewById(R.id.title_update_time);
@@ -74,14 +76,14 @@ public class WeatherActivity extends AppCompatActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
 
-        if (weatherString != null) {
+        if (weatherString != null) {//有缓存 直接处理解析 显示
             Weather weather = Utility.handleWeatherResponse(weatherString);
-            mWeatherId = weather.basic.weatherId;
+            mWeatherId = weather.basic.weatherId;/**************************/
             showWeatherInfo(weather);
-        } else {
-            mWeatherId = getIntent().getStringExtra("weather_id");
+        } else {//无缓存时 去服务器获取天气数据
+            mWeatherId = getIntent().getStringExtra("weather_id");//获取上一个活动传过来的weather_Id
             //Log.d("TAG", "onCreate: " + weatherId);
-            //weatherLayout.setVisibility(View.INVISIBLE);
+            weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(mWeatherId);
         }
         swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
@@ -107,7 +109,7 @@ public class WeatherActivity extends AppCompatActivity {
         HttpUtil.SendOKHttpRequest(weatherUrl, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.d("TAG", "出现问题 ");
+                //Log.d("TAG", "出现问题 ");
                 e.printStackTrace();
                 runOnUiThread(new Runnable() {
                     @Override
@@ -118,20 +120,21 @@ public class WeatherActivity extends AppCompatActivity {
                 });
             }
 
-            @Override
+            @Override//获取服务器响应时 处理数据创建对应的实体类
             public void onResponse(Call call, Response response) throws IOException {
-                final String responseText = response.body().string();
+                final String responseText = response.body().string();//未经处理的返回数据文本
                // Log.d("TAG", "onCreate: " + responseText);
-                final Weather weather = Utility.handleWeatherResponse(responseText);
+                final Weather weather = Utility.handleWeatherResponse(responseText);//创建对应的实体类
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (weather != null && "ok".equals(weather.status)) {
+                        if (weather != null && "ok".equals(weather.status)) {//如果数据成功获取
                             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).
                                     edit();
-                            editor.putString("weather", responseText);
+                            editor.putString("weather", responseText);//保存未经处理的返回数据文本到.xml文件中
                             editor.apply();
-                            showWeatherInfo(weather);
+                            mWeatherId = weather.basic.weatherId;//获取想要的天气id****************
+                            showWeatherInfo(weather);//显示天气
                         } else {
                             Toast.makeText(WeatherActivity.this, "获取天气失败", Toast.LENGTH_LONG).show();
                         }
@@ -144,16 +147,21 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void showWeatherInfo(Weather weather) {
+
+        //获取相应的实体类对象的成员变量 即天气信息的各个部分
         String cityName = weather.basic.cityName;
-        String updateTime = weather.basic.update.updateTime.split(" ")[1];
+        String updateTime = weather.basic.update.updateTime.split(" ")[1];/*************************/
         String degree = weather.now.temperature + "℃";
         String weatherInfo = weather.now.more.info;
+        //初始化布局 显示数据
         titleCity.setText(cityName);
         titleUpdateTime.setText(updateTime);
         degreeText.setText(degree);
         weatherInfoText.setText(weatherInfo);
-        forecastLayout.removeAllViews();
-        for (Forecast forecast : weather.forecastList) {
+
+
+        forecastLayout.removeAllViews();//天气预报对应的控件先去除
+        for (Forecast forecast : weather.forecastList) {//遍历过程中 一次加载一个显示预报天气的布局（动态加载）
             View view = LayoutInflater.from(this).inflate(R.layout.forecast_item, forecastLayout, false);
             TextView dateText = view.findViewById(R.id.date_text);
             TextView infoText = view.findViewById(R.id.info_text);
@@ -163,7 +171,7 @@ public class WeatherActivity extends AppCompatActivity {
             infoText.setText(forecast.more.info);
             maxText.setText(forecast.temperature.max);
             minText.setText(forecast.temperature.min);
-            forecastLayout.addView(view);
+            forecastLayout.addView(view);//在线性布局中确认添加设置好的view
         }
         if (weather.aqi != null) {
             aqiText.setText(weather.aqi.city.aqi);
